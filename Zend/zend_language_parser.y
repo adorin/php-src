@@ -477,10 +477,10 @@ unset_variable:
 ;
 
 function_declaration_statement:
-	function returns_ref T_STRING '(' parameter_list ')' return_type
+	function returns_ref T_STRING type_parameter_list '(' parameter_list ')' return_type
 	backup_doc_comment '{' inner_statement_list '}'
-		{ $$ = zend_ast_create_decl(ZEND_AST_FUNC_DECL, $2, $1, $8,
-		      zend_ast_get_str($3), $5, NULL, $10, $7); }
+		{ $$ = zend_ast_create_decl(ZEND_AST_FUNC_DECL, $2, $1, $9,
+		      zend_ast_get_str($3), $6, NULL, $11, $8); }
 ;
 
 is_reference:
@@ -739,10 +739,10 @@ class_statement:
 			{ $$ = $3; $$->attr = $1; }
 	|	T_USE name_list trait_adaptations
 			{ $$ = zend_ast_create(ZEND_AST_USE_TRAIT, $2, $3); }
-	|	method_modifiers function returns_ref identifier '(' parameter_list ')'
+	|	method_modifiers function returns_ref identifier type_parameter_list '(' parameter_list ')'
 		return_type backup_doc_comment method_body
-			{ $$ = zend_ast_create_decl(ZEND_AST_METHOD, $3 | $1, $2, $9,
-				  zend_ast_get_str($4), $6, NULL, $10, $8); }
+			{ $$ = zend_ast_create_decl(ZEND_AST_METHOD, $3 | $1, $2, $10,
+				  zend_ast_get_str($4), $7, NULL, $11, $9); }
 ;
 
 name_list:
@@ -1034,12 +1034,12 @@ lexical_var:
 ;
 
 function_call:
-		name argument_list
-			{ $$ = zend_ast_create(ZEND_AST_CALL, $1, $2); }
-	|	class_name T_PAAMAYIM_NEKUDOTAYIM member_name argument_list
-			{ $$ = zend_ast_create(ZEND_AST_STATIC_CALL, $1, $3, $4); }
-	|	variable_class_name T_PAAMAYIM_NEKUDOTAYIM member_name argument_list
-			{ $$ = zend_ast_create(ZEND_AST_STATIC_CALL, $1, $3, $4); }
+		name type_argument_list argument_list
+			{ $$ = zend_ast_create(ZEND_AST_CALL, $1, $3); }
+	|	class_name T_PAAMAYIM_NEKUDOTAYIM member_name type_argument_list argument_list
+			{ $$ = zend_ast_create(ZEND_AST_STATIC_CALL, $1, $3, $5); }
+	|	variable_class_name T_PAAMAYIM_NEKUDOTAYIM member_name type_argument_list argument_list
+			{ $$ = zend_ast_create(ZEND_AST_STATIC_CALL, $1, $3, $5); }
 	|	callable_expr argument_list
 			{ $$ = zend_ast_create(ZEND_AST_CALL, $1, $2); }
 ;
@@ -1150,8 +1150,8 @@ callable_variable:
 			{ $$ = zend_ast_create(ZEND_AST_DIM, $1, $3); }
 	|	dereferencable '{' expr '}'
 			{ $$ = zend_ast_create(ZEND_AST_DIM, $1, $3); }
-	|	dereferencable T_OBJECT_OPERATOR property_name argument_list
-			{ $$ = zend_ast_create(ZEND_AST_METHOD_CALL, $1, $3, $4); }
+	|	dereferencable T_OBJECT_OPERATOR property_name type_argument_list argument_list
+			{ $$ = zend_ast_create(ZEND_AST_METHOD_CALL, $1, $3, $5); }
 	|	function_call { $$ = $1; }
 ;
 
