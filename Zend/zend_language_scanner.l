@@ -1077,7 +1077,7 @@ static int zend_scan_escape_string(zval *zendlval, char *str, int len, char quot
 
 static int emit_token(int token, int token_line)
 {
-	if(SCNG(on_event)) SCNG(on_event)(ON_TOKEN, token, token_line);
+	if(SCNG(on_event)) (on_event)(ON_TOKEN, token, token_line);
 
 	return token;
 }
@@ -1119,8 +1119,8 @@ static int zend_check_token_is_start_type_argument()
 static int zend_check_token_is_close_type_argument(int rewind)
 {
 	unsigned char *offset = YYCURSOR;
-	YYCURSOR--;
-	YYCURSOR--;
+	*YYCURSOR--;
+	*YYCURSOR--;
 	int ret = 0;
 	int skips = 0;
 
@@ -1152,7 +1152,7 @@ static int zend_check_token_is_close_type_argument(int rewind)
 	YYCURSOR  = offset;
 	//YYCURSOR -= rewind;
 	if (ret && rewind) {
-		YYCURSOR--;		
+		*YYCURSOR--;		
 	}
 	return ret;
 }
