@@ -121,6 +121,7 @@ do {																			\
 #define IS_LABEL_START(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || (c) == '_' || (c) >= 0x7F)
 #define IS_LABEL_MID(c)   (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || (c) == '_' || (c) >= 0x7F || ((c) >='0' && (c) <= '9'))
 
+#define ZEND_IS_WHITESPACE(c) ((c) == ' ' || (c) == '\n' || (c) == '\r' || (c) == '\t')
 #define ZEND_IS_OCT(c)  ((c)>='0' && (c)<='7')
 #define ZEND_IS_HEX(c)  (((c)>='0' && (c)<='9') || ((c)>='a' && (c)<='f') || ((c)>='A' && (c)<='F'))
 
@@ -1088,12 +1089,11 @@ static int zend_check_token_is_start_type_argument()
 	unsigned char *offset = YYCURSOR;
 	int ret = 0;
 	int skips = 0;
-	int label_started = 0;
 
 	while (YYCURSOR < YYLIMIT) {
 		char c = *YYCURSOR++;
 
-		if (IS_LABEL_MID(c) || c == ',') {
+		if (IS_LABEL_MID(c) || ZEND_IS_WHITESPACE(c) || c == ',') {
 			continue;
 		}
 		if (c == '<') {
@@ -1129,7 +1129,7 @@ static int zend_check_token_is_close_type_argument(int rewind)
 	while (YYCURSOR >= 0) {
 		char c = *YYCURSOR--;
 
-		if (IS_LABEL_MID(c) || c == ',') {
+		if (IS_LABEL_MID(c) || ZEND_IS_WHITESPACE(c) || c == ',') {
 			continue;
 		}
 
@@ -1154,7 +1154,7 @@ static int zend_check_token_is_close_type_argument(int rewind)
 	YYCURSOR  = offset;
 	//YYCURSOR -= rewind;
 	if (ret && rewind) {
-		*YYCURSOR--;		
+		YYCURSOR--;		
 	}
 	return ret;
 }

@@ -255,6 +255,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> assignment_list isset_variable type return_type
 %type <ast> identifier
 %type <ast> type_argument type_argument_list non_empty_type_argument_list
+%type <ast> type_parameter type_parameter_list non_empty_type_parameter_list
 
 %type <num> returns_ref function is_reference is_variadic variable_modifiers
 %type <num> method_modifiers non_empty_member_modifiers member_modifier
@@ -494,11 +495,11 @@ is_variadic:
 
 class_declaration_statement:
 		class_modifiers T_CLASS { $<num>$ = CG(zend_lineno); }
-		T_STRING extends_from implements_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, $1, $<num>3, $7, zend_ast_get_str($4), $5, $6, $9, NULL); }
+		T_STRING type_parameter_list extends_from implements_list backup_doc_comment '{' class_statement_list '}'
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, $1, $<num>3, $8, zend_ast_get_str($4), $6, $7, $10, NULL); }
 	|	T_CLASS { $<num>$ = CG(zend_lineno); }
-		T_STRING extends_from implements_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, 0, $<num>2, $6, zend_ast_get_str($3), $4, $5, $8, NULL); }
+		T_STRING type_parameter_list extends_from implements_list backup_doc_comment '{' class_statement_list '}'
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, 0, $<num>2, $7, zend_ast_get_str($3), $5, $6, $9, NULL); }
 ;
 
 class_modifiers:
@@ -513,19 +514,19 @@ class_modifier:
 
 trait_declaration_statement:
 		T_TRAIT { $<num>$ = CG(zend_lineno); }
-		T_STRING backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_TRAIT, $<num>2, $4, zend_ast_get_str($3), NULL, NULL, $6, NULL); }
+		T_STRING type_parameter_list backup_doc_comment '{' class_statement_list '}'
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_TRAIT, $<num>2, $5, zend_ast_get_str($3), NULL, NULL, $7, NULL); }
 ;
 
 interface_declaration_statement:
 		T_INTERFACE { $<num>$ = CG(zend_lineno); }
-		T_STRING interface_extends_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_INTERFACE, $<num>2, $5, zend_ast_get_str($3), NULL, $4, $7, NULL); }
+		T_STRING type_parameter_list interface_extends_list backup_doc_comment '{' class_statement_list '}'
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_INTERFACE, $<num>2, $6, zend_ast_get_str($3), NULL, $5, $8, NULL); }
 ;
 
 extends_from:
 		/* empty */		{ $$ = NULL; }
-	|	T_EXTENDS name	{ $$ = $2; }
+	|	T_EXTENDS name type_argument_list	{ $$ = $2; }
 ;
 
 interface_extends_list:
@@ -640,7 +641,6 @@ parameter:
 
 optional_type:
 		/* empty */	{ $$ = NULL; }
-//	|	type		{ $$ = $1; }
 	|	type type_argument_list { $$ = $1; }
 ;
 
@@ -652,7 +652,7 @@ type:
 
 return_type:
 		/* empty */	{ $$ = NULL; }
-	|	':' type	{ $$ = $2; }
+	|	':' type type_argument_list	{ $$ = $2; }
 ;
 
 type_argument_list:
@@ -667,7 +667,22 @@ non_empty_type_argument_list:
 ;
 
 type_argument:
-		name type_argument_list { $$ = zend_ast_create_type_ref(ZEND_AST_CLASS_NAME, $1, $2); }
+		name type_argument_list { $$ = NULL; }
+;
+
+type_parameter_list:
+		/* empty */	{ $$ = NULL; }
+	|			T_START_TARG non_empty_type_parameter_list T_CLOSE_TARG{ $$ = $2; }
+;
+
+non_empty_type_parameter_list:
+		type_parameter { $$ = zend_ast_create_list(1, ZEND_AST_TYPE_PARAM_LIST, $1); }
+	|	non_empty_type_parameter_list ',' type_parameter
+			{ $$ = zend_ast_list_add($1, $3); }
+;
+
+type_parameter:
+		name { $$ = NULL; }
 ;
 
 argument_list:
@@ -731,8 +746,8 @@ class_statement:
 ;
 
 name_list:
-		name { $$ = zend_ast_create_list(1, ZEND_AST_NAME_LIST, $1); }
-	|	name_list ',' name { $$ = zend_ast_list_add($1, $3); }
+		name type_argument_list { $$ = zend_ast_create_list(1, ZEND_AST_NAME_LIST, $1); }
+	|	name_list ',' name type_argument_list { $$ = zend_ast_list_add($1, $3); }
 ;
 
 trait_adaptations:
@@ -1033,7 +1048,7 @@ class_name:
 		T_STATIC
 			{ zval zv; ZVAL_STRINGL(&zv, "static", sizeof("static")-1);
 			  $$ = zend_ast_create_zval_ex(&zv, ZEND_NAME_NOT_FQ); }
-	|	name type_argument_list { $$ = zend_ast_create_type_ref(ZEND_AST_CLASS_NAME, $1, $2); }
+	|	name type_argument_list { $$ = $1; }
 
 ;
 
