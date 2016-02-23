@@ -2583,8 +2583,8 @@ yy120:
 		yyleng = YYCURSOR - SCNG(yy_text);
 #line 1554 "Zend/zend_language_scanner.l"
 		{
-	if (SCNG(targ_level) > 0) {
-		SCNG(targ_level)--;
+	if (SCNG(targ_count) > 0) {
+		SCNG(targ_count)--;
 
 		RETURN_TOKEN(T_START_TARG);
 	} else {
@@ -2600,17 +2600,17 @@ yy120:
 				continue;
 			}
 			if (c == '<') {
-				SCNG(targ_level)++;
+				SCNG(targ_count)++;
 
 				skips++;
 				continue;
 			}
 			if (c == '>') {
-				SCNG(targ_level)++;
+				SCNG(targ_count)++;
 
 				if (skips == 0) {
 					if (*YYCURSOR == '>') {
-						SCNG(targ_level) = 0;
+						SCNG(targ_count) = 0;
 					} else {
 						istarg = 1;
 					}
@@ -2646,8 +2646,8 @@ yy122:
 		yyleng = YYCURSOR - SCNG(yy_text);
 #line 1607 "Zend/zend_language_scanner.l"
 		{
-	if (SCNG(targ_level) > 0) {
-		SCNG(targ_level)--;
+	if (SCNG(targ_count) > 0) {
+		SCNG(targ_count)--;
 
 		RETURN_TOKEN(T_CLOSE_TARG);
 	} else {
@@ -3461,8 +3461,8 @@ yy205:
 		yyleng = YYCURSOR - SCNG(yy_text);
 #line 1621 "Zend/zend_language_scanner.l"
 		{
-	if (SCNG(targ_level) > 0) {
-		SCNG(targ_level)--;
+	if (SCNG(targ_count) > 0) {
+		SCNG(targ_count)--;
 		YYCURSOR--;
 
 		RETURN_TOKEN(T_CLOSE_TARG);
