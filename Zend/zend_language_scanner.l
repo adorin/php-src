@@ -117,6 +117,7 @@ do {																			\
 #define GET_DOUBLE_QUOTES_SCANNED_LENGTH()    SCNG(scanned_string_len)
 
 #define IS_LABEL_START(c) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || (c) == '_' || (c) >= 0x7F)
+#define IS_LABEL_MID(c)   (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z') || (c) == '_' || (c) >= 0x7F || ((c) >='0' && (c) <= '9'))
 
 #define ZEND_IS_OCT(c)  ((c)>='0' && (c)<='7')
 #define ZEND_IS_HEX(c)  (((c)>='0' && (c)<='9') || ((c)>='a' && (c)<='f') || ((c)>='A' && (c)<='F'))
@@ -1073,11 +1074,87 @@ static int zend_scan_escape_string(zval *zendlval, char *str, int len, char quot
 	return SUCCESS;
 }
 
-static zend_always_inline int emit_token(int token, int token_line)
+static int emit_token(int token, int token_line)
 {
 	if(SCNG(on_event)) SCNG(on_event)(ON_TOKEN, token, token_line);
 
 	return token;
+}
+
+static int zend_check_token_is_start_type_argument()
+{
+	unsigned char *offset = YYCURSOR;
+	int ret = 0;
+	int skips = 0;
+	int label_started = 0;
+
+	while (YYCURSOR < YYLIMIT) {
+		char c = *YYCURSOR++;
+
+		if (IS_LABEL_MID(c) || c == ',') {
+			continue;
+		}
+		if (c == '<') {
+			skips++;
+			continue;
+		}
+		if (c == '>') {
+			if (skips == 0) {
+				ret = 1;
+				break;	
+			} else {
+				skips--;
+				continue;
+			}
+		}
+
+		break;
+	}
+
+	YYCURSOR = offset;
+	
+	return ret;
+}
+
+static int zend_check_token_is_close_type_argument(int rewind)
+{
+	unsigned char *offset = YYCURSOR;
+	*YYCURSOR--;
+	*YYCURSOR--;
+	int ret = 0;
+	int skips = 0;
+
+	while (YYCURSOR >= 0) {
+		char c = *YYCURSOR--;
+
+		if (IS_LABEL_MID(c) || c == ',') {
+			continue;
+		}
+
+		if (c == '>') {
+			skips++;
+			continue;
+		}
+
+		if (c == '<') {
+			if (skips == 0) {
+				ret = 1;
+				break;
+			} else {
+				skips--;
+				continue;
+			}
+		}
+
+		break;
+	}
+
+	YYCURSOR  = offset;
+	//YYCURSOR -= rewind;
+	if (ret && rewind) {
+		*YYCURSOR--;		
+	}
+	return ret;
 }
 
 #define RETURN_TOKEN(token) return emit_token(token, start_line);
@@ -1549,12 +1626,32 @@ NEWLINE ("\r"|"\n"|"\r\n")
 	RETURN_TOKEN(T_LOGICAL_XOR);
 }
 
+<ST_IN_SCRIPTING>"<" {
+	if (zend_check_token_is_start_type_argument()) {
+		RETURN_TOKEN(T_START_TARG);
+	} else {
+		RETURN_TOKEN('<');
+	}
+}
+
+<ST_IN_SCRIPTING>">" {
+	if (zend_check_token_is_close_type_argument(0)) {
+		RETURN_TOKEN(T_CLOSE_TARG);
+	} else {
+		RETURN_TOKEN('>');
+	}
+}
+
 <ST_IN_SCRIPTING>"<<" {
 	RETURN_TOKEN(T_SL);
 }
 
 <ST_IN_SCRIPTING>">>" {
-	RETURN_TOKEN(T_SR);
+	if (zend_check_token_is_close_type_argument(1)) {
+		RETURN_TOKEN(T_CLOSE_TARG);
+	} else {
+		RETURN_TOKEN(T_SR);
+	}
 }
 
 <ST_IN_SCRIPTING>{TOKENS} {
@@ -1877,7 +1974,6 @@ inline_char_handler:
 	zend_copy_value(zendlval, yytext, yyleng);
 	RETURN_TOKEN(T_STRING);
 }
-
 
 <ST_IN_SCRIPTING>"#"|"//" {
 	while (YYCURSOR < YYLIMIT) {

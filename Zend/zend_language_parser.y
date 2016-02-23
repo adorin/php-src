@@ -221,6 +221,8 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %token T_COALESCE        "?? (T_COALESCE)"
 %token T_POW             "** (T_POW)"
 %token T_POW_EQUAL       "**= (T_POW_EQUAL)"
+%token T_START_TARG      "< (T_START_TARG)"
+%token T_CLOSE_TARG      "> (T_CLOSE_TARG)"
 
 /* Token used to force a parse error from the lexer */
 %token T_ERROR
@@ -252,6 +254,7 @@ static YYSIZE_T zend_yytnamerr(char*, const char*);
 %type <ast> lexical_var_list encaps_list array_pair_list non_empty_array_pair_list
 %type <ast> assignment_list isset_variable type return_type
 %type <ast> identifier
+%type <ast> type_argument type_argument_list non_empty_type_argument_list
 
 %type <num> returns_ref function is_reference is_variadic variable_modifiers
 %type <num> method_modifiers non_empty_member_modifiers member_modifier
@@ -637,7 +640,8 @@ parameter:
 
 optional_type:
 		/* empty */	{ $$ = NULL; }
-	|	type		{ $$ = $1; }
+//	|	type		{ $$ = $1; }
+	|	type type_argument_list { $$ = $1; }
 ;
 
 type:
@@ -649,6 +653,21 @@ type:
 return_type:
 		/* empty */	{ $$ = NULL; }
 	|	':' type	{ $$ = $2; }
+;
+
+type_argument_list:
+		/* empty */	{ $$ = NULL; }
+	|			T_START_TARG non_empty_type_argument_list T_CLOSE_TARG{ $$ = $2; }
+;
+
+non_empty_type_argument_list:
+		type_argument { $$ = zend_ast_create_list(1, ZEND_AST_TYPE_ARG_LIST, $1); }
+	|	non_empty_type_argument_list ',' type_argument
+			{ $$ = zend_ast_list_add($1, $3); }
+;
+
+type_argument:
+		name type_argument_list { $$ = zend_ast_create_type_ref(ZEND_AST_CLASS_NAME, $1, $2); }
 ;
 
 argument_list:
@@ -1014,11 +1033,12 @@ class_name:
 		T_STATIC
 			{ zval zv; ZVAL_STRINGL(&zv, "static", sizeof("static")-1);
 			  $$ = zend_ast_create_zval_ex(&zv, ZEND_NAME_NOT_FQ); }
-	|	name { $$ = $1; }
+	|	name type_argument_list { $$ = zend_ast_create_type_ref(ZEND_AST_CLASS_NAME, $1, $2); }
+
 ;
 
 class_name_reference:
-		class_name		{ $$ = $1; }
+		class_name	{ $$ = $1; }
 	|	new_variable	{ $$ = $1; }
 ;
 
