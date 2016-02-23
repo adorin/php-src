@@ -1077,84 +1077,9 @@ static int zend_scan_escape_string(zval *zendlval, char *str, int len, char quot
 
 static int emit_token(int token, int token_line)
 {
-	if(SCNG(on_event)) (on_event)(ON_TOKEN, token, token_line);
+	if(SCNG(on_event)) SCNG(on_event)(ON_TOKEN, token, token_line);
 
 	return token;
-}
-
-static int zend_check_token_is_start_type_argument()
-{
-	unsigned char *offset = YYCURSOR;
-	int ret = 0;
-	int skips = 0;
-
-	while (YYCURSOR < YYLIMIT) {
-		char c = *YYCURSOR++;
-
-		if (IS_LABEL_MID(c) || ZEND_IS_WHITESPACE(c) || c == ',') {
-			continue;
-		}
-		if (c == '<') {
-			skips++;
-			continue;
-		}
-		if (c == '>') {
-			if (skips == 0) {
-				ret = 1;
-				break;	
-			} else {
-				skips--;
-				continue;
-			}
-		}
-
-		break;
-	}
-
-	YYCURSOR = offset;
-	
-	return ret;
-}
-
-static int zend_check_token_is_close_type_argument(int rewind)
-{
-	unsigned char *offset = YYCURSOR;
-	*YYCURSOR--;
-	*YYCURSOR--;
-	int ret = 0;
-	int skips = 0;
-
-	while (YYCURSOR >= 0) {
-		char c = *YYCURSOR--;
-
-		if (IS_LABEL_MID(c) || ZEND_IS_WHITESPACE(c) || c == ',') {
-			continue;
-		}
-
-		if (c == '>') {
-			skips++;
-			continue;
-		}
-
-		if (c == '<') {
-			if (skips == 0) {
-				ret = 1;
-				break;
-			} else {
-				skips--;
-				continue;
-			}
-		}
-
-		break;
-	}
-
-	YYCURSOR  = offset;
-	//YYCURSOR -= rewind;
-	if (ret && rewind) {
-		*YYCURSOR--;		
-	}
-	return ret;
 }
 
 #define RETURN_TOKEN(token) return emit_token(token, start_line);
@@ -1627,15 +1552,62 @@ NEWLINE ("\r"|"\n"|"\r\n")
 }
 
 <ST_IN_SCRIPTING>"<" {
-	if (zend_check_token_is_start_type_argument()) {
+	if (SCNG(targ_count) > 0) {
+		SCNG(targ_count)--;
+
 		RETURN_TOKEN(T_START_TARG);
 	} else {
-		RETURN_TOKEN('<');
+
+		unsigned char *offset = YYCURSOR;
+		int skips  = 0;
+		int istarg = 0;
+
+		while (YYCURSOR < YYLIMIT) {
+			char c = *YYCURSOR++;
+
+			if (IS_LABEL_MID(c) || ZEND_IS_WHITESPACE(c) || c == ',') {
+				continue;
+			}
+			if (c == '<') {
+				SCNG(targ_count)++;
+
+				skips++;
+				continue;
+			}
+			if (c == '>') {
+				SCNG(targ_count)++;
+
+				if (skips == 0) {
+					if (*YYCURSOR == '>') {
+						SCNG(targ_count) = 0;
+					} else {
+						istarg = 1;
+					}
+
+					break;	
+				} else {
+					skips--;
+					continue;
+				}
+			}
+
+			break;
+		}
+
+		YYCURSOR = offset;
+
+		if (istarg) {
+			RETURN_TOKEN(T_START_TARG);
+		} else {
+			RETURN_TOKEN('<');
+		}
 	}
 }
 
 <ST_IN_SCRIPTING>">" {
-	if (zend_check_token_is_close_type_argument(0)) {
+	if (SCNG(targ_count) > 0) {
+		SCNG(targ_count)--;
+
 		RETURN_TOKEN(T_CLOSE_TARG);
 	} else {
 		RETURN_TOKEN('>');
@@ -1647,7 +1619,10 @@ NEWLINE ("\r"|"\n"|"\r\n")
 }
 
 <ST_IN_SCRIPTING>">>" {
-	if (zend_check_token_is_close_type_argument(1)) {
+	if (SCNG(targ_count) > 0) {
+		SCNG(targ_count)--;
+		YYCURSOR--;
+
 		RETURN_TOKEN(T_CLOSE_TARG);
 	} else {
 		RETURN_TOKEN(T_SR);
