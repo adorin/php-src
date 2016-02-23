@@ -1119,8 +1119,8 @@ static int zend_check_token_is_start_type_argument()
 static int zend_check_token_is_close_type_argument(int rewind)
 {
 	unsigned char *offset = YYCURSOR;
-	*YYCURSOR--;
-	*YYCURSOR--;
+	YYCURSOR--;
+	YYCURSOR--;
 	int ret = 0;
 	int skips = 0;
 
