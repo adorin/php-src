@@ -1565,6 +1565,7 @@ NEWLINE ("\r"|"\n"|"\r\n")
 		while (YYCURSOR < YYLIMIT) {
 			char c = *YYCURSOR++;
 
+			// This is enough for now, but it will need to scan for the entire pattern eventually.
 			if (IS_LABEL_MID(c) || ZEND_IS_WHITESPACE(c) || c == ',') {
 				continue;
 			}
@@ -1578,9 +1579,7 @@ NEWLINE ("\r"|"\n"|"\r\n")
 				SCNG(targ_count)++;
 
 				if (skips == 0) {
-					if (*YYCURSOR == '>') {
-						SCNG(targ_count) = 0;
-					} else {
+					if (*YYCURSOR != '>') {
 						istarg = 1;
 					}
 
@@ -1599,6 +1598,7 @@ NEWLINE ("\r"|"\n"|"\r\n")
 		if (istarg) {
 			RETURN_TOKEN(T_START_TARG);
 		} else {
+			SCNG(targ_count) = 0;
 			RETURN_TOKEN('<');
 		}
 	}
