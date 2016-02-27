@@ -746,7 +746,7 @@ class_statement:
 ;
 
 name_list:
-		name type_argument_list { $$ = zend_ast_create_list(1, ZEND_AST_NAME_LIST, $1); }
+		name type_argument_list { $$ = zend_ast_create_list(1, ZEND_AST_NAME_LIST, zend_ast_create_type_ref($1, $2, 0)); }
 	|	name_list ',' name type_argument_list { $$ = zend_ast_list_add($1, $3); }
 ;
 
@@ -1048,7 +1048,7 @@ class_name:
 		T_STATIC
 			{ zval zv; ZVAL_STRINGL(&zv, "static", sizeof("static")-1);
 			  $$ = zend_ast_create_zval_ex(&zv, ZEND_NAME_NOT_FQ); }
-	|	name type_argument_list { $$ = $1; }
+	|	name type_argument_list { $$ = zend_ast_create_type_ref($1, $2, 0); }
 
 ;
 

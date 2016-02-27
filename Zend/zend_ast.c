@@ -93,6 +93,18 @@ ZEND_API zend_ast *zend_ast_create_decl(
 	return (zend_ast *) ast;
 }
 
+ZEND_API zend_ast *zend_ast_create_type_ref(zend_ast *type_name, zend_ast *type_args, zend_ast_attr attr) {
+	zend_ast_type_ref *ast;
+
+	ast = zend_ast_alloc(sizeof(zend_ast_type_ref));
+	ast->kind = ZEND_AST_TYPE_REF;
+	ast->attr = attr;
+	ast->type_name = type_name;
+	ast->type_args = type_args;
+	ast->lineno = CG(zend_lineno);
+	return (zend_ast *) ast;
+}
+
 static zend_ast *zend_ast_create_from_va_list(zend_ast_kind kind, zend_ast_attr attr, va_list va) {
 	uint32_t i, children = kind >> ZEND_AST_NUM_CHILDREN_SHIFT;
 	zend_ast *ast;

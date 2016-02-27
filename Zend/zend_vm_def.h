@@ -7235,25 +7235,10 @@ ZEND_VM_HANDLER(190, ZEND_ADD_CLASS_TYPE_PARAM, ANY, CONST)
 {
 	USE_OPLINE
 	zend_class_entry *ce = Z_CE_P(EX_VAR(opline->op1.var));
-	//zend_class_entry *iface;
 
 	SAVE_OPLINE();
 
-	/*
-	iface = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)));
-	if (UNEXPECTED(iface == NULL)) {
-		iface = zend_fetch_class_by_name(Z_STR_P(EX_CONSTANT(opline->op2)), EX_CONSTANT(opline->op2) + 1, ZEND_FETCH_CLASS_INTERFACE);
-		if (UNEXPECTED(iface == NULL)) {
-			ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
-		}
-		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)), iface);
-	}
-
-	if (UNEXPECTED((iface->ce_flags & ZEND_ACC_INTERFACE) == 0)) {
-		zend_error_noreturn(E_ERROR, "%s cannot implement %s - it is not an interface", ZSTR_VAL(ce->name), ZSTR_VAL(iface->name));
-	}
-	zend_do_implement_interface(ce, iface);
-	*/
+	// TODO: make sure X, Y, Z types are not already potential classes in the current namespace.
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
