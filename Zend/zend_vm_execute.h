@@ -2602,6 +2602,33 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_ADD_INTERFACE_SPEC_CONST_HANDL
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }
 
+static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_ADD_CLASS_TYPE_PARAM_SPEC_CONST_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
+{
+	USE_OPLINE
+	zend_class_entry *ce = Z_CE_P(EX_VAR(opline->op1.var));
+	//zend_class_entry *iface;
+
+	SAVE_OPLINE();
+
+	/*
+	iface = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)));
+	if (UNEXPECTED(iface == NULL)) {
+		iface = zend_fetch_class_by_name(Z_STR_P(EX_CONSTANT(opline->op2)), EX_CONSTANT(opline->op2) + 1, ZEND_FETCH_CLASS_INTERFACE);
+		if (UNEXPECTED(iface == NULL)) {
+			ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+		}
+		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)), iface);
+	}
+
+	if (UNEXPECTED((iface->ce_flags & ZEND_ACC_INTERFACE) == 0)) {
+		zend_error_noreturn(E_ERROR, "%s cannot implement %s - it is not an interface", ZSTR_VAL(ce->name), ZSTR_VAL(iface->name));
+	}
+	zend_do_implement_interface(ce, iface);
+	*/
+
+	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+}
+
 static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_DECLARE_INHERITED_CLASS_SPEC_VAR_HANDLER(ZEND_OPCODE_HANDLER_ARGS)
 {
 	USE_OPLINE
@@ -57139,6 +57166,11 @@ void zend_init_opcodes_handlers(void)
 		ZEND_NULL_HANDLER,
 		ZEND_NULL_HANDLER,
 		ZEND_NULL_HANDLER,
+		ZEND_ADD_CLASS_TYPE_PARAM_SPEC_CONST_HANDLER,
+		ZEND_NULL_HANDLER,
+		ZEND_NULL_HANDLER,
+		ZEND_NULL_HANDLER,
+		ZEND_NULL_HANDLER,
 		ZEND_NULL_HANDLER
 	};
 	static const uint32_t specs[] = {
@@ -57183,7 +57215,7 @@ void zend_init_opcodes_handlers(void)
 		776 | SPEC_RULE_OP1 | SPEC_RULE_OP2 | SPEC_RULE_RETVAL,
 		826 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
 		851 | SPEC_RULE_OP1,
-		2920,
+		2925,
 		856,
 		857 | SPEC_RULE_OP1,
 		862 | SPEC_RULE_OP1,
@@ -57191,9 +57223,9 @@ void zend_init_opcodes_handlers(void)
 		872 | SPEC_RULE_OP1,
 		877 | SPEC_RULE_OP1,
 		882 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
-		2920,
-		2920,
-		2920,
+		2925,
+		2925,
+		2925,
 		907 | SPEC_RULE_OP1,
 		912 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
 		937 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
@@ -57242,7 +57274,7 @@ void zend_init_opcodes_handlers(void)
 		1646 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
 		1671 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
 		1696 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
-		2920,
+		2925,
 		1721,
 		1722,
 		1723,
@@ -57326,7 +57358,14 @@ void zend_init_opcodes_handlers(void)
 		2845 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
 		2870 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
 		2895 | SPEC_RULE_OP1 | SPEC_RULE_OP2,
-		2920
+		2925,
+		2925,
+		2925,
+		2925,
+		2925,
+		2925,
+		2920 | SPEC_RULE_OP2,
+		2925
 	};
 	zend_opcode_handlers = labels;
 	zend_spec_handlers = specs;

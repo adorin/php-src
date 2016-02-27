@@ -88,7 +88,7 @@ ZEND_API zend_ast *zend_ast_create_decl(
 	ast->child[1] = child1;
 	ast->child[2] = child2;
 	ast->child[3] = child3;
-	ast->child[4] = child3;
+	ast->child[4] = child4;
 
 	return (zend_ast *) ast;
 }

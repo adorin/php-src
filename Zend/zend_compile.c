@@ -1210,6 +1210,7 @@ void zend_do_early_binding(void) /* {{{ */
 				break;
 			}
 		case ZEND_VERIFY_ABSTRACT_CLASS:
+		case ZEND_ADD_CLASS_TYPE_PARAM:
 		case ZEND_ADD_INTERFACE:
 		case ZEND_ADD_TRAIT:
 		case ZEND_BIND_TRAITS:
@@ -1720,6 +1721,7 @@ ZEND_API void zend_initialize_class_data(zend_class_entry *ce, zend_bool nullify
 	ce->default_static_members_table = NULL;
 	zend_hash_init_ex(&ce->properties_info, 8, NULL, (persistent_hashes ? zend_destroy_property_info_internal : NULL), persistent_hashes, 0);
 	zend_hash_init_ex(&ce->constants_table, 8, NULL, (persistent_hashes ? zend_destroy_class_constant_internal : NULL), persistent_hashes, 0);
+	zend_hash_init_ex(&ce->type_param_table, 8, NULL, (persistent_hashes ? zend_destroy_class_constant_internal : NULL), persistent_hashes, 0);
 	zend_hash_init_ex(&ce->function_table, 8, NULL, ZEND_FUNCTION_DTOR, persistent_hashes, 0);
 
 	if (ce->type == ZEND_INTERNAL_CLASS) {
@@ -5548,6 +5550,34 @@ void zend_compile_implements(znode *class_node, zend_ast *ast) /* {{{ */
 }
 /* }}} */
 
+void zend_compile_class_type_params(znode *class_node, zend_ast *ast) /* {{{ */
+{
+	zend_class_entry *ce = CG(active_class_entry);
+	zend_ast_list *list = zend_ast_get_list(ast);
+	uint32_t i;
+	for (i = 0; i < list->children; ++i) {
+		zend_ast *name_ast = list->child[i];
+		zend_string *name = zend_ast_get_str(name_ast);
+
+		zend_op *opline;
+
+		opline = zend_emit_op(NULL, ZEND_ADD_CLASS_TYPE_PARAM, class_node, NULL);
+		opline->op2_type = IS_CONST;
+		opline->op2.constant = zend_add_literal_string(CG(active_op_array), &name);
+
+		// add the alias name as the key and the position as the value.
+		// change this to use lcname
+		if (zend_hash_add_ptr(&ce->type_param_table, name, &i) == NULL) {
+			zend_error_noreturn(E_COMPILE_ERROR, "Cannot redeclare type parameter <%s> %s",
+				ZSTR_VAL(name), ZSTR_VAL(ce->name));
+		}
+
+		ce->num_type_params++;
+	}
+	
+}
+/* }}} */
+
 static zend_string *zend_generate_anon_class_name(unsigned char *lex_pos) /* {{{ */
 {
 	zend_string *result;
@@ -5568,6 +5598,7 @@ void zend_compile_class_decl(zend_ast *ast) /* {{{ */
 	zend_ast *extends_ast = decl->child[0];
 	zend_ast *implements_ast = decl->child[1];
 	zend_ast *stmt_ast = decl->child[2];
+	zend_ast *type_params_ast = decl->child[4];
 	zend_string *name, *lcname, *import_name = NULL;
 	zend_class_entry *ce = zend_arena_alloc(&CG(arena), sizeof(zend_class_entry));
 	zend_op *opline;
@@ -5675,6 +5706,10 @@ void zend_compile_class_decl(zend_ast *ast) /* {{{ */
 
 	if (implements_ast) {
 		zend_compile_implements(&declare_node, implements_ast);
+	}
+
+	if (type_params_ast) {
+		zend_compile_class_type_params(&declare_node, type_params_ast);
 	}
 
 	zend_compile_stmt(stmt_ast);
