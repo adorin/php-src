@@ -244,6 +244,10 @@ static zend_always_inline zend_string *zend_ast_get_str(zend_ast *ast) {
 	ZEND_ASSERT(Z_TYPE_P(zv) == IS_STRING);
 	return Z_STR_P(zv);
 }
+static zend_always_inline zend_ast_type_ref *zend_ast_get_type_ref(zend_ast *ast) {
+	ZEND_ASSERT(ast->kind == ZEND_AST_TYPE_REF);
+	return (zend_ast_type_ref *) ast;
+}
 
 static zend_always_inline uint32_t zend_ast_get_num_children(zend_ast *ast) {
 	ZEND_ASSERT(!zend_ast_is_list(ast));

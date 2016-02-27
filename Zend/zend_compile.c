@@ -3688,6 +3688,8 @@ void zend_compile_static_call(znode *result, zend_ast *ast, uint32_t type) /* {{
 
 void zend_compile_class_decl(zend_ast *ast);
 
+void zend_compile_type_arguments(zend_ast *ast, zend_bool is_start);
+
 void zend_compile_new(znode *result, zend_ast *ast) /* {{{ */
 {
 	zend_ast *class_ast = ast->child[0];
@@ -3712,7 +3714,13 @@ void zend_compile_new(znode *result, zend_ast *ast) /* {{{ */
 		zend_ast *name_ast;
 
 		if (class_ast->kind == ZEND_AST_TYPE_REF) {
-			name_ast = ((zend_ast_type_ref *) class_ast)->type_name;
+			zend_ast_type_ref *type_ref_ast = zend_ast_get_type_ref(class_ast);
+
+			if (type_ref_ast->type_args) {
+				zend_compile_type_arguments(type_ref_ast->type_args, 1);
+			}
+
+			name_ast = type_ref_ast->type_name;
 		} else {
 			name_ast = class_ast;
 		}
@@ -3720,6 +3728,8 @@ void zend_compile_new(znode *result, zend_ast *ast) /* {{{ */
 		// TODO: DG: the class name might be a variable at this point, will need to account for the type args later
 		zend_compile_class_ref_ex(&class_node, name_ast, ZEND_FETCH_CLASS_EXCEPTION);
 	}
+
+
 
 	opnum = get_next_op_number(CG(active_op_array));
 	opline = zend_emit_op(result, ZEND_NEW, NULL, NULL);
@@ -5536,10 +5546,29 @@ void zend_compile_use_trait(zend_ast *ast) /* {{{ */
 }
 /* }}} */
 
-//void zend_compile_type_arguments()
-//{
-//
-//}
+void zend_compile_type_arguments(zend_ast *ast, zend_bool is_start)
+{
+	zend_ast_list *list = zend_ast_get_list(ast);
+
+	uint32_t i;
+	for (i = 0; i < list->children; ++i) {
+		zend_ast_type_ref *child = zend_ast_get_type_ref(list->child[i]);
+		//zend_string *name = zend_ast_get_str(child->type_name);
+
+		znode class_node;
+
+		// Testing out the class fetch for interface type args
+		zend_compile_class_ref(&class_node, child->type_name, ZEND_FETCH_CLASS_EXCEPTION);
+
+		// K, so basically, this needs to construct a hierachy of stuff to do "before"
+		// the respective operation this function being being called for.
+		// It needs to lay down a state in the ops which the handlers can pick up on.
+
+		if (child->type_args) {
+			zend_do_compile_type_arguments(child->type_args, 0);
+		}
+	}
+}
 
 void zend_compile_class_type_params(znode *class_node, zend_ast *ast) /* {{{ */
 {
@@ -5577,7 +5606,7 @@ void zend_compile_implements(znode *class_node, zend_ast *ast) /* {{{ */
 	zend_ast_list *list = zend_ast_get_list(ast);
 	uint32_t i;
 	for (i = 0; i < list->children; ++i) {
-		zend_ast_type_ref *type_ref_ast = (zend_ast_type_ref *)(list->child[i]);
+		zend_ast_type_ref *type_ref_ast = zend_ast_get_type_ref(list->child[i]);
 
 		zend_ast *class_ast = type_ref_ast->type_name;
 		zend_string *name = zend_ast_get_str(class_ast);
@@ -5589,8 +5618,11 @@ void zend_compile_implements(znode *class_node, zend_ast *ast) /* {{{ */
 				"Cannot use '%s' as interface name as it is reserved", ZSTR_VAL(name));
 		}
 
-		// TODO: emit the state of the type arguments with: zend_compile_type_arguments
-
+		if (type_ref_ast->type_args) {
+			// TODO: incomplete function
+			zend_compile_type_arguments(type_ref_ast->type_args, 1);
+		}
+		
 		opline = zend_emit_op(NULL, ZEND_ADD_INTERFACE, class_node, NULL);
 		opline->op2_type = IS_CONST;
 		opline->op2.constant = zend_add_class_name_literal(CG(active_op_array),
@@ -5687,6 +5719,8 @@ void zend_compile_class_decl(zend_ast *ast) /* {{{ */
 			zend_error_noreturn(E_COMPILE_ERROR,
 				"Cannot use '%s' as class name as it is reserved", ZSTR_VAL(extends_name));
 		}
+
+		//zend_ast_type_ref *extends_type_ref_ast = zend_ast_get_type_ref(extends_ast);
 
 		zend_compile_class_ref(&extends_node, extends_ast, 0);
 	}
