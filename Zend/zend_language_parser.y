@@ -480,7 +480,7 @@ function_declaration_statement:
 	function returns_ref T_STRING type_parameter_list '(' parameter_list ')' return_type
 	backup_doc_comment '{' inner_statement_list '}'
 		{ $$ = zend_ast_create_decl(ZEND_AST_FUNC_DECL, $2, $1, $9,
-		      zend_ast_get_str($3), $6, NULL, $11, $8); }
+		      zend_ast_get_str($3), $6, NULL, $11, $8, $4); }
 ;
 
 is_reference:
@@ -496,10 +496,10 @@ is_variadic:
 class_declaration_statement:
 		class_modifiers T_CLASS { $<num>$ = CG(zend_lineno); }
 		T_STRING type_parameter_list extends_from implements_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, $1, $<num>3, $8, zend_ast_get_str($4), $6, $7, $10, NULL); }
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, $1, $<num>3, $8, zend_ast_get_str($4), $6, $7, $10, NULL, $5); }
 	|	T_CLASS { $<num>$ = CG(zend_lineno); }
 		T_STRING type_parameter_list extends_from implements_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, 0, $<num>2, $7, zend_ast_get_str($3), $5, $6, $9, NULL); }
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, 0, $<num>2, $7, zend_ast_get_str($3), $5, $6, $9, NULL, $4); }
 ;
 
 class_modifiers:
@@ -515,13 +515,13 @@ class_modifier:
 trait_declaration_statement:
 		T_TRAIT { $<num>$ = CG(zend_lineno); }
 		T_STRING type_parameter_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_TRAIT, $<num>2, $5, zend_ast_get_str($3), NULL, NULL, $7, NULL); }
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_TRAIT, $<num>2, $5, zend_ast_get_str($3), NULL, NULL, $7, NULL, $4); }
 ;
 
 interface_declaration_statement:
 		T_INTERFACE { $<num>$ = CG(zend_lineno); }
 		T_STRING type_parameter_list interface_extends_list backup_doc_comment '{' class_statement_list '}'
-			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_INTERFACE, $<num>2, $6, zend_ast_get_str($3), NULL, $5, $8, NULL); }
+			{ $$ = zend_ast_create_decl(ZEND_AST_CLASS, ZEND_ACC_INTERFACE, $<num>2, $6, zend_ast_get_str($3), NULL, $5, $8, NULL, $4); }
 ;
 
 extends_from:
@@ -672,7 +672,7 @@ type_argument:
 
 type_parameter_list:
 		/* empty */	{ $$ = NULL; }
-	|			T_START_TARG non_empty_type_parameter_list T_CLOSE_TARG{ $$ = $2; }
+	|			T_START_TARG non_empty_type_parameter_list T_CLOSE_TARG { $$ = $2; }
 ;
 
 non_empty_type_parameter_list:
@@ -682,7 +682,7 @@ non_empty_type_parameter_list:
 ;
 
 type_parameter:
-		name { $$ = NULL; }
+		name { $$ = $1; }
 ;
 
 argument_list:
@@ -742,7 +742,7 @@ class_statement:
 	|	method_modifiers function returns_ref identifier type_parameter_list '(' parameter_list ')'
 		return_type backup_doc_comment method_body
 			{ $$ = zend_ast_create_decl(ZEND_AST_METHOD, $3 | $1, $2, $10,
-				  zend_ast_get_str($4), $7, NULL, $11, $9); }
+				  zend_ast_get_str($4), $7, NULL, $11, $9, $5); }
 ;
 
 name_list:
@@ -874,7 +874,7 @@ anonymous_class:
 		extends_from implements_list backup_doc_comment '{' class_statement_list '}' {
 			zend_ast *decl = zend_ast_create_decl(
 				ZEND_AST_CLASS, ZEND_ACC_ANON_CLASS, $<num>2, $6, NULL,
-				$4, $5, $8, NULL);
+				$4, $5, $8, NULL, NULL);
 			$$ = zend_ast_create(ZEND_AST_NEW, decl, $3);
 		}
 ;
@@ -997,12 +997,12 @@ expr_without_variable:
 		backup_doc_comment '{' inner_statement_list '}'
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, $2, $1, $8,
 				  zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      $4, $6, $10, $7); }
+			      $4, $6, $10, $7, NULL); }
 	|	T_STATIC function returns_ref '(' parameter_list ')' lexical_vars
 		return_type backup_doc_comment '{' inner_statement_list '}'
 			{ $$ = zend_ast_create_decl(ZEND_AST_CLOSURE, $3 | ZEND_ACC_STATIC, $2, $9,
 			      zend_string_init("{closure}", sizeof("{closure}") - 1, 0),
-			      $5, $7, $11, $8); }
+			      $5, $7, $11, $8, NULL); }
 ;
 
 function:
