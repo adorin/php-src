@@ -80,6 +80,7 @@ typedef struct _zend_object_handlers zend_object_handlers;
 typedef struct _zend_class_entry     zend_class_entry;
 typedef union  _zend_function        zend_function;
 typedef struct _zend_execute_data    zend_execute_data;
+typedef struct _zend_type_arg_data   zend_type_arg_data;
 
 typedef struct _zval_struct     zval;
 
@@ -280,6 +281,7 @@ struct _zend_object {
 	const zend_object_handlers *handlers;
 	HashTable        *properties;
 	zval              properties_table[1];
+	HashTable	 *type_args;
 };
 
 struct _zend_resource {

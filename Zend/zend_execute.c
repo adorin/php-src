@@ -2354,6 +2354,15 @@ ZEND_API void zend_init_execute_data(zend_execute_data *execute_data, zend_op_ar
 }
 /* }}} */
 
+ZEND_API zend_type_arg_data *zend_init_type_arg_data()
+{
+	zend_type_arg_data *type_arg_data = zend_arena_alloc(&CG(arena), sizeof(zend_type_arg_data));
+	zend_hash_init_ex(&type_arg_data->type_args, 8, NULL, NULL, 0, 0);
+	type_arg_data->pos = 0;
+	
+	return type_arg_data;
+}
+
 static zend_always_inline zend_bool zend_is_by_ref_func_arg_fetch(const zend_op *opline, zend_execute_data *call) /* {{{ */
 {
 	uint32_t arg_num = opline->extended_value & ZEND_FETCH_ARG_MASK;

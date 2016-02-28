@@ -160,6 +160,9 @@ struct _zend_executor_globals {
 	zval          *vm_stack_end;
 	zend_vm_stack  vm_stack;
 
+	struct _zend_type_arg_data *type_arg_data;
+	struct _zend_type_arg_data *current_type_arg_data;
+
 	struct _zend_execute_data *current_execute_data;
 	zend_class_entry *scope;
 

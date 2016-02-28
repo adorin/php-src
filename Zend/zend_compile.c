@@ -1721,7 +1721,7 @@ ZEND_API void zend_initialize_class_data(zend_class_entry *ce, zend_bool nullify
 	ce->default_static_members_table = NULL;
 	zend_hash_init_ex(&ce->properties_info, 8, NULL, (persistent_hashes ? zend_destroy_property_info_internal : NULL), persistent_hashes, 0);
 	zend_hash_init_ex(&ce->constants_table, 8, NULL, (persistent_hashes ? zend_destroy_class_constant_internal : NULL), persistent_hashes, 0);
-	zend_hash_init_ex(&ce->type_param_table, 8, NULL, (persistent_hashes ? zend_destroy_class_constant_internal : NULL), persistent_hashes, 0);
+	//zend_hash_init_ex(&ce->type_param_table, 8, NULL, (persistent_hashes ? zend_destroy_class_constant_internal : NULL), persistent_hashes, 0);
 	zend_hash_init_ex(&ce->function_table, 8, NULL, ZEND_FUNCTION_DTOR, persistent_hashes, 0);
 
 	if (ce->type == ZEND_INTERNAL_CLASS) {
@@ -3688,7 +3688,7 @@ void zend_compile_static_call(znode *result, zend_ast *ast, uint32_t type) /* {{
 
 void zend_compile_class_decl(zend_ast *ast);
 
-void zend_compile_type_arguments(zend_ast *ast, zend_bool is_start);
+void zend_compile_type_arguments(znode *class_node, zend_ast *ast, zend_bool is_start);
 
 void zend_compile_new(znode *result, zend_ast *ast) /* {{{ */
 {
@@ -3710,26 +3710,16 @@ void zend_compile_new(znode *result, zend_ast *ast) /* {{{ */
 		class_node.op_type = opline->result_type;
 		class_node.u.op.var = opline->result.var;
 		opline->extended_value = get_next_op_number(CG(active_op_array));
-	} else {
-		zend_ast *name_ast;
 
-		if (class_ast->kind == ZEND_AST_TYPE_REF) {
-			zend_ast_type_ref *type_ref_ast = zend_ast_get_type_ref(class_ast);
+	} else if (class_ast->kind == ZEND_AST_TYPE_REF) {
+		zend_compile_class_ref(&class_node, zend_ast_get_type_ref(class_ast)->type_name, ZEND_FETCH_CLASS_EXCEPTION);
 
-			if (type_ref_ast->type_args) {
-				zend_compile_type_arguments(type_ref_ast->type_args, 1);
-			}
-
-			name_ast = type_ref_ast->type_name;
-		} else {
-			name_ast = class_ast;
+		if (zend_ast_get_type_ref(class_ast)->type_args) {
+			zend_compile_type_arguments(&class_node, class_ast, 1);
 		}
-
-		// TODO: DG: the class name might be a variable at this point, will need to account for the type args later
-		zend_compile_class_ref_ex(&class_node, name_ast, ZEND_FETCH_CLASS_EXCEPTION);
+	} else {
+		zend_compile_class_ref_ex(&class_node, class_ast, ZEND_FETCH_CLASS_EXCEPTION);
 	}
-
-
 
 	opnum = get_next_op_number(CG(active_op_array));
 	opline = zend_emit_op(result, ZEND_NEW, NULL, NULL);
@@ -5546,26 +5536,37 @@ void zend_compile_use_trait(zend_ast *ast) /* {{{ */
 }
 /* }}} */
 
-void zend_compile_type_arguments(zend_ast *ast, zend_bool is_start)
+void zend_compile_type_arguments(znode *class_node, zend_ast *ast, zend_bool is_start)
 {
-	zend_ast_list *list = zend_ast_get_list(ast);
+	
+	zend_ast_type_ref *type_ref = zend_ast_get_type_ref(ast);
+	zend_ast_list *list         = zend_ast_get_list(type_ref->type_args);
+
+	if (is_start) {
+		zend_emit_op(NULL, ZEND_INIT_TYPE_ARGS, class_node, NULL);
+	}
 
 	uint32_t i;
 	for (i = 0; i < list->children; ++i) {
 		zend_ast_type_ref *child = zend_ast_get_type_ref(list->child[i]);
 		//zend_string *name = zend_ast_get_str(child->type_name);
 
-		znode class_node;
-
 		// Testing out the class fetch for interface type args
-		zend_compile_class_ref(&class_node, child->type_name, ZEND_FETCH_CLASS_EXCEPTION);
+
+		znode type_node;
+
+		zend_compile_class_ref(&type_node, child->type_name, ZEND_FETCH_CLASS_EXCEPTION);
+
+		zend_emit_op(NULL, ZEND_ADD_TYPE_ARG, &type_node, NULL);
+
+		//zend_add_literal_string(CG(active_op_array), &name);
 
 		// K, so basically, this needs to construct a hierachy of stuff to do "before"
 		// the respective operation this function being being called for.
 		// It needs to lay down a state in the ops which the handlers can pick up on.
 
 		if (child->type_args) {
-			zend_do_compile_type_arguments(child->type_args, 0);
+			zend_compile_type_arguments(&type_node, list->child[i], 0);
 		}
 	}
 }
@@ -5574,6 +5575,9 @@ void zend_compile_class_type_params(znode *class_node, zend_ast *ast) /* {{{ */
 {
 	zend_class_entry *ce = CG(active_class_entry);
 	zend_ast_list *list = zend_ast_get_list(ast);
+
+	ce->type_params = emalloc(sizeof(zend_string) * list->children);
+
 	uint32_t i;
 	for (i = 0; i < list->children; ++i) {
 		zend_ast *name_ast = list->child[i];
@@ -5586,16 +5590,15 @@ void zend_compile_class_type_params(znode *class_node, zend_ast *ast) /* {{{ */
 		opline->op2.constant = zend_add_literal_string(CG(active_op_array), &name);
 
 		// TODO: check if freeing needed.
-		uint32_t *position = emalloc(sizeof(uint32_t));
-		memcpy(position, &i, sizeof(uint32_t));
+		//uint32_t *position = emalloc(sizeof(uint32_t));
+		//memcpy(position, &i, sizeof(uint32_t));
 
 		// add the alias name as the key and the position as the value.
-		if (zend_hash_add_ptr(&ce->type_param_table, name, position) == NULL) {
-			zend_error_noreturn(E_COMPILE_ERROR, "Cannot redeclare type parameter <%s> on %s",
-				ZSTR_VAL(name), ZSTR_VAL(ce->name));
-		}
+		//if (zend_hash_add_ptr(&ce->type_param_table, name, position) == NULL) {
+		
+		//}
 
-		ce->num_type_params++;
+		//ce->num_type_params++;
 	}
 	
 }
@@ -5618,10 +5621,9 @@ void zend_compile_implements(znode *class_node, zend_ast *ast) /* {{{ */
 				"Cannot use '%s' as interface name as it is reserved", ZSTR_VAL(name));
 		}
 
-		if (type_ref_ast->type_args) {
-			// TODO: incomplete function
-			zend_compile_type_arguments(type_ref_ast->type_args, 1);
-		}
+		//if (type_ref_ast->type_args) {
+		//	zend_compile_type_arguments(list->child[i], 1);
+		//}
 		
 		opline = zend_emit_op(NULL, ZEND_ADD_INTERFACE, class_node, NULL);
 		opline->op2_type = IS_CONST;

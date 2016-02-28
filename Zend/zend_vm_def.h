@@ -7235,10 +7235,88 @@ ZEND_VM_HANDLER(190, ZEND_ADD_CLASS_TYPE_PARAM, ANY, CONST)
 {
 	USE_OPLINE
 	zend_class_entry *ce = Z_CE_P(EX_VAR(opline->op1.var));
+	zend_string *param;
+
+	SAVE_OPLINE();
+	param = Z_STR_P(EX_CONSTANT(opline->op2));
+
+	//if (UNEXPECTED(zend_lookup_class_ex(param, EX_CONSTANT(opline->op2) + 1, 1) != NULL)) {
+	//	zend_error_noreturn(E_ERROR, "%s cannot use type parameter %s - it is a real class", ZSTR_VAL(ce->name), ZSTR_VAL(param));
+	//}
+	
+	uint32_t i;
+	for (i = 0; i < ce->num_type_params; i++) {
+		if (UNEXPECTED(zend_string_equals(ce->type_params[i], param))) {
+			zend_error_noreturn(E_COMPILE_ERROR, "Cannot redeclare type parameter %s on %s",
+				ZSTR_VAL(param), ZSTR_VAL(ce->name));
+		}
+	}
+
+	ce->num_type_params++;
+	ce->type_params[i] = param;
+	
+
+	// TODO: make sure X, Y, Z types are not already potential classes in the current namespace.
+
+	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+}
+
+ZEND_VM_HANDLER(191, ZEND_INIT_TYPE_ARGS, ANY, ANY)
+{
+	USE_OPLINE
+	zend_class_entry *ce = Z_CE_P(EX_VAR(opline->op1.var));
 
 	SAVE_OPLINE();
 
-	// TODO: make sure X, Y, Z types are not already potential classes in the current namespace.
+	zend_type_arg_data *type_arg_data = zend_init_type_arg_data();
+	type_arg_data->ce = ce;
+
+	// TODO: release this at some point
+	EG(type_arg_data) = type_arg_data;
+	EG(current_type_arg_data) = type_arg_data;
+
+	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+}
+
+ZEND_VM_HANDLER(192, ZEND_ADD_TYPE_ARG, ANY, ANY)
+{
+	USE_OPLINE
+	zend_class_entry *ce;
+	zend_class_entry *type_arg_ce = Z_CE_P(EX_VAR(opline->op1.var));
+	zend_type_arg_data *type_arg_data;
+
+	SAVE_OPLINE();
+	
+	
+	ce = EG(current_type_arg_data)->ce;
+
+	EG(current_type_arg_data)->pos++;
+
+	if (UNEXPECTED((EG(current_type_arg_data)->pos) > (ce->num_type_params))) {
+		zend_error_noreturn(E_ERROR, "Incorrect number of type arguments given, expected %i argument for %s",
+			ce->num_type_params, ZSTR_VAL(ce->name));
+	}
+
+	type_arg_data = zend_init_type_arg_data();
+	type_arg_data->ce = type_arg_ce;
+
+	// TODO: continuation for nested types.
+
+	/*
+	type_arg = CACHED_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)));
+	if (UNEXPECTED(type_arg == NULL)) {
+		type_arg = zend_fetch_class_by_name(Z_STR_P(EX_CONSTANT(opline->op2)), EX_CONSTANT(opline->op2) + 1, 0);
+		if (UNEXPECTED(type_arg == NULL)) {
+			ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
+		}
+		CACHE_PTR(Z_CACHE_SLOT_P(EX_CONSTANT(opline->op2)), type_arg);
+	}
+	*/
+
+
+	//int args = EG(current_type_args);
+	
+	//zend_do_implement_interface(ce, iface);
 
 	ZEND_VM_NEXT_OPCODE_CHECK_EXCEPTION();
 }

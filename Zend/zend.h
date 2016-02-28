@@ -143,7 +143,7 @@ struct _zend_class_entry {
 	HashTable function_table;
 	HashTable properties_info;
 	HashTable constants_table;
-	HashTable type_param_table;
+	zend_string **type_params;
 
 	union _zend_function *constructor;
 	union _zend_function *destructor;

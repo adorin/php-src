@@ -466,6 +466,12 @@ struct _zend_execute_data {
 #endif
 };
 
+struct _zend_type_arg_data {
+	zend_class_entry *ce;
+	HashTable type_args;
+	int pos;
+};
+
 #define ZEND_CALL_FUNCTION           (0 << 0)
 #define ZEND_CALL_CODE               (1 << 0)
 #define ZEND_CALL_NESTED             (0 << 1)

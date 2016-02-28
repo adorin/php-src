@@ -247,7 +247,9 @@ END_EXTERN_C()
 #define ZEND_BIND_LEXICAL                    182
 #define ZEND_BIND_STATIC                     183
 #define ZEND_ADD_CLASS_TYPE_PARAM            190
+#define ZEND_INIT_TYPE_ARGS                  191
+#define ZEND_ADD_TYPE_ARG                    192
 
-#define ZEND_VM_LAST_OPCODE                  190
+#define ZEND_VM_LAST_OPCODE                  192
 
 #endif
