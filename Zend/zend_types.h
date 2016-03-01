@@ -275,13 +275,13 @@ typedef struct _HashTableIterator {
 } HashTableIterator;
 
 struct _zend_object {
-	zend_refcounted_h gc;
-	uint32_t          handle; // TODO: may be removed ???
-	zend_class_entry *ce;
+	zend_refcounted_h   gc;
+	uint32_t            handle; // TODO: may be removed ???
+	zend_class_entry   *ce;
+	zend_type_arg_data *type_arg_data;
 	const zend_object_handlers *handlers;
-	HashTable        *properties;
-	zval              properties_table[1];
-	HashTable	 *type_args;
+	HashTable          *properties;
+	zval                properties_table[1];
 };
 
 struct _zend_resource {
