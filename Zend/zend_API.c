@@ -1310,6 +1310,12 @@ ZEND_API int _object_and_properties_init(zval *arg, zend_class_entry *class_type
 	} else {
 		ZVAL_OBJ(arg, class_type->create_object(class_type));
 	}
+
+	if (EG(type_arg_data) != NULL) {
+		Z_OBJ_P(arg)->type_arg_data = EG(type_arg_data);
+		EG(type_arg_data) = NULL;
+	}
+
 	return SUCCESS;
 }
 /* }}} */

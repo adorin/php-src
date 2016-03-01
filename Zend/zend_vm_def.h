@@ -5029,8 +5029,6 @@ ZEND_VM_HANDLER(68, ZEND_NEW, UNUSED|CLASS_FETCH|CONST|VAR, JMP_ADDR, NUM)
 		ce = Z_CE_P(EX_VAR(opline->op1.var));
 	}
 
-	zend_type_arg_data *type_arg_data = EG(type_arg_data);
-
 	result = EX_VAR(opline->result.var);
 	if (UNEXPECTED(object_init_ex(result, ce) != SUCCESS)) {
 		HANDLE_EXCEPTION();

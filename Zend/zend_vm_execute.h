@@ -3798,8 +3798,6 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_NEW_SPEC_CONST_HANDLER(ZEND_OP
 		ce = Z_CE_P(EX_VAR(opline->op1.var));
 	}
 
-	zend_type_arg_data *type_arg_data = EG(type_arg_data);
-
 	result = EX_VAR(opline->result.var);
 	if (UNEXPECTED(object_init_ex(result, ce) != SUCCESS)) {
 		HANDLE_EXCEPTION();
@@ -15811,8 +15809,6 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_NEW_SPEC_VAR_HANDLER(ZEND_OPCO
 		ce = Z_CE_P(EX_VAR(opline->op1.var));
 	}
 
-	zend_type_arg_data *type_arg_data = EG(type_arg_data);
-
 	result = EX_VAR(opline->result.var);
 	if (UNEXPECTED(object_init_ex(result, ce) != SUCCESS)) {
 		HANDLE_EXCEPTION();
@@ -26072,8 +26068,6 @@ static ZEND_OPCODE_HANDLER_RET ZEND_FASTCALL ZEND_NEW_SPEC_UNUSED_HANDLER(ZEND_O
 	} else {
 		ce = Z_CE_P(EX_VAR(opline->op1.var));
 	}
-
-	zend_type_arg_data *type_arg_data = EG(type_arg_data);
 
 	result = EX_VAR(opline->result.var);
 	if (UNEXPECTED(object_init_ex(result, ce) != SUCCESS)) {
