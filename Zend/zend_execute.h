@@ -49,7 +49,7 @@ ZEND_API int zend_eval_string(char *str, zval *retval_ptr, char *string_name);
 ZEND_API int zend_eval_stringl(char *str, size_t str_len, zval *retval_ptr, char *string_name);
 ZEND_API int zend_eval_string_ex(char *str, zval *retval_ptr, char *string_name, int handle_exceptions);
 ZEND_API int zend_eval_stringl_ex(char *str, size_t str_len, zval *retval_ptr, char *string_name, int handle_exceptions);
-ZEND_API zend_type_arg_data *zend_init_type_arg_data();
+ZEND_API zend_type_arg_data *zend_init_type_arg_data(uint32_t children);
 
 ZEND_API void ZEND_FASTCALL zend_check_internal_arg_type(zend_function *zf, uint32_t arg_num, zval *arg);
 ZEND_API int  ZEND_FASTCALL zend_check_arg_type(zend_function *zf, uint32_t arg_num, zval *arg, zval *default_value, void **cache_slot);

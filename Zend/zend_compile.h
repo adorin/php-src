@@ -467,9 +467,11 @@ struct _zend_execute_data {
 };
 
 struct _zend_type_arg_data {
-	zend_class_entry *ce;
-	HashTable type_args;
-	int pos;
+	zend_string *type_name;
+	zend_type_arg_data **type_args;
+	uint32_t flags;
+	uint32_t children;
+	uint32_t position;
 };
 
 #define ZEND_CALL_FUNCTION           (0 << 0)

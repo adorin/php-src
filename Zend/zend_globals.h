@@ -162,6 +162,7 @@ struct _zend_executor_globals {
 
 	struct _zend_type_arg_data *type_arg_data;
 	struct _zend_type_arg_data *current_type_arg_data;
+	struct _zend_type_arg_data *prev_type_arg_data;
 
 	struct _zend_execute_data *current_execute_data;
 	zend_class_entry *scope;

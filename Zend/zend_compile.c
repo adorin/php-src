@@ -1724,6 +1724,8 @@ ZEND_API void zend_initialize_class_data(zend_class_entry *ce, zend_bool nullify
 	//zend_hash_init_ex(&ce->type_param_table, 8, NULL, (persistent_hashes ? zend_destroy_class_constant_internal : NULL), persistent_hashes, 0);
 	zend_hash_init_ex(&ce->function_table, 8, NULL, ZEND_FUNCTION_DTOR, persistent_hashes, 0);
 
+	ce->num_type_params = 0;
+
 	if (ce->type == ZEND_INTERNAL_CLASS) {
 #ifdef ZTS
 		int n = zend_hash_num_elements(CG(class_table));
@@ -3688,7 +3690,7 @@ void zend_compile_static_call(znode *result, zend_ast *ast, uint32_t type) /* {{
 
 void zend_compile_class_decl(zend_ast *ast);
 
-void zend_compile_type_arguments(znode *class_node, zend_ast *ast, zend_bool is_start);
+void zend_compile_type_arguments(zend_ast *ast);
 
 void zend_compile_new(znode *result, zend_ast *ast) /* {{{ */
 {
@@ -3712,11 +3714,11 @@ void zend_compile_new(znode *result, zend_ast *ast) /* {{{ */
 		opline->extended_value = get_next_op_number(CG(active_op_array));
 
 	} else if (class_ast->kind == ZEND_AST_TYPE_REF) {
-		zend_compile_class_ref(&class_node, zend_ast_get_type_ref(class_ast)->type_name, ZEND_FETCH_CLASS_EXCEPTION);
-
 		if (zend_ast_get_type_ref(class_ast)->type_args) {
-			zend_compile_type_arguments(&class_node, class_ast, 1);
+			zend_compile_type_arguments(zend_ast_get_type_ref(class_ast)->type_args);
 		}
+
+		zend_compile_class_ref(&class_node, zend_ast_get_type_ref(class_ast)->type_name, ZEND_FETCH_CLASS_EXCEPTION);
 	} else {
 		zend_compile_class_ref_ex(&class_node, class_ast, ZEND_FETCH_CLASS_EXCEPTION);
 	}
@@ -5536,39 +5538,39 @@ void zend_compile_use_trait(zend_ast *ast) /* {{{ */
 }
 /* }}} */
 
-void zend_compile_type_arguments(znode *class_node, zend_ast *ast, zend_bool is_start)
+void zend_do_compile_type_arguments(zend_ast *ast)
 {
-	
-	zend_ast_type_ref *type_ref = zend_ast_get_type_ref(ast);
-	zend_ast_list *list         = zend_ast_get_list(type_ref->type_args);
-
-	if (is_start) {
-		zend_emit_op(NULL, ZEND_INIT_TYPE_ARGS, class_node, NULL);
-	}
+	zend_ast_list *list = zend_ast_get_list(ast);
 
 	uint32_t i;
 	for (i = 0; i < list->children; ++i) {
 		zend_ast_type_ref *child = zend_ast_get_type_ref(list->child[i]);
-		//zend_string *name = zend_ast_get_str(child->type_name);
+		
+		zend_op *opline;
 
-		// Testing out the class fetch for interface type args
-
-		znode type_node;
-
-		zend_compile_class_ref(&type_node, child->type_name, ZEND_FETCH_CLASS_EXCEPTION);
-
-		zend_emit_op(NULL, ZEND_ADD_TYPE_ARG, &type_node, NULL);
-
-		//zend_add_literal_string(CG(active_op_array), &name);
-
-		// K, so basically, this needs to construct a hierachy of stuff to do "before"
-		// the respective operation this function being being called for.
-		// It needs to lay down a state in the ops which the handlers can pick up on.
-
+		opline = zend_emit_op(NULL, ZEND_ADD_TYPE_ARG, NULL, NULL);
+		opline->op1_type = IS_CONST;
+		opline->op1.constant = zend_add_class_name_literal(CG(active_op_array),
+			zend_resolve_class_name_ast(child->type_name));
+		
 		if (child->type_args) {
-			zend_compile_type_arguments(&type_node, list->child[i], 0);
+			opline->extended_value = zend_ast_get_list(child->type_args)->children;
+			zend_emit_op(NULL, ZEND_ADD_TYPE_ARG_DOWN, NULL, NULL);
+			zend_do_compile_type_arguments(child->type_args);
+			zend_emit_op(NULL, ZEND_ADD_TYPE_ARG_UP, NULL, NULL);
 		}
 	}
+}
+
+void zend_compile_type_arguments(zend_ast *ast)
+{
+	zend_op *opline;
+
+	opline = zend_emit_op(NULL, ZEND_INIT_TYPE_ARGS, NULL, NULL);
+	opline->extended_value = zend_ast_get_list(ast)->children;
+
+	zend_do_compile_type_arguments(ast);
+	
 }
 
 void zend_compile_class_type_params(znode *class_node, zend_ast *ast) /* {{{ */
@@ -5581,14 +5583,14 @@ void zend_compile_class_type_params(znode *class_node, zend_ast *ast) /* {{{ */
 	uint32_t i;
 	for (i = 0; i < list->children; ++i) {
 		zend_ast *name_ast = list->child[i];
-		zend_string *name = zend_ast_get_str(name_ast);
+		//zend_string *name = zend_ast_get_str(name_ast);
 
 		zend_op *opline;
 
 		opline = zend_emit_op(NULL, ZEND_ADD_CLASS_TYPE_PARAM, class_node, NULL);
 		opline->op2_type = IS_CONST;
-		opline->op2.constant = zend_add_literal_string(CG(active_op_array), &name);
-
+		opline->op2.constant = zend_add_class_name_literal(CG(active_op_array),
+			zend_resolve_class_name_ast(name_ast));
 		// TODO: check if freeing needed.
 		//uint32_t *position = emalloc(sizeof(uint32_t));
 		//memcpy(position, &i, sizeof(uint32_t));

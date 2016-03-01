@@ -2354,11 +2354,18 @@ ZEND_API void zend_init_execute_data(zend_execute_data *execute_data, zend_op_ar
 }
 /* }}} */
 
-ZEND_API zend_type_arg_data *zend_init_type_arg_data()
+ZEND_API zend_type_arg_data *zend_init_type_arg_data(uint32_t children)
 {
 	zend_type_arg_data *type_arg_data = zend_arena_alloc(&CG(arena), sizeof(zend_type_arg_data));
-	zend_hash_init_ex(&type_arg_data->type_args, 8, NULL, NULL, 0, 0);
-	type_arg_data->pos = 0;
+	//zend_hash_init_ex(&type_arg_data->type_args, 8, NULL, NULL, 0, 0);
+
+	if (children > 0) {
+		type_arg_data->type_args = zend_arena_alloc(&CG(arena), sizeof(zend_type_arg_data *) * children);
+	}
+
+	type_arg_data->children = children;
+	type_arg_data->position = 0;
+	type_arg_data->flags = 0;
 	
 	return type_arg_data;
 }
